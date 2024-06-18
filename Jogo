@@ -1,0 +1,81 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <pthread.h>
+#include <unistd.h>
+#include <semaphore.h>
+
+#define MAX_SCORE 10
+#define MIN_SCORE -1
+
+int pontuacao_aviao = 5;
+sem_t semaforo;
+
+void* aviaoSubir(void* arg) {
+    while (pontuacao_aviao < MAX_SCORE && pontuacao_aviao > MIN_SCORE) {
+        sem_wait(&semaforo); 
+        pontuacao_aviao++;
+        printf("Avião subiu! Pontuação atual: %d\n", pontuacao_aviao);
+        sem_post(&semaforo); 
+        usleep(200);  // Modificado para 200 microsegundos
+    }
+    return NULL;
+}
+
+void* aviaoDescer(void* arg) {
+    while (pontuacao_aviao < MAX_SCORE && pontuacao_aviao > MIN_SCORE) {
+        sem_wait(&semaforo);
+        pontuacao_aviao--;
+        printf("Avião desceu! Pontuação atual: %d\n", pontuacao_aviao);
+        sem_post(&semaforo); 
+        usleep(100);  // Mantido em 100 microsegundos
+    }
+    return NULL;
+}
+
+int main() {
+    int opcao = 0; 
+    double valor = 0.0, valorFinal = 0.0;
+
+    sem_init(&semaforo, 0, 1);
+
+    do {
+        printf("\nJogo do avião, o jogador controla um avião que pode subir ou descer.\n O objetivo é manter o avião voando o máximo possível, acumulando pontos à medida que ele sobe e evitando perder pontos quando ele desce.\n O jogo termina quando o avião atinge a pontuação máxima de 10 pontos ou a pontuação mínima de -1 pontos.\n");
+        printf("Digite 1 para iniciar o jogo\n");
+        printf("Digite 0 para sair do código\n");
+        scanf("%d", &opcao);
+
+        switch (opcao) {
+            case 1:
+                printf("Digite o valor que deseja apostar: ");
+                scanf("%lf", &valor);
+
+                pthread_t thread_aviaoSubir, thread_aviaoDescer;
+
+                pthread_create(&thread_aviaoSubir, NULL, aviaoSubir, NULL);
+                pthread_create(&thread_aviaoDescer, NULL, aviaoDescer, NULL);
+
+                pthread_join(thread_aviaoSubir, NULL);
+                pthread_join(thread_aviaoDescer, NULL);
+
+                sem_destroy(&semaforo);
+
+                if (pontuacao_aviao >= MAX_SCORE) {
+                    printf("O avião atingiu a pontuação máxima! Você ganhou!\n");
+                    valorFinal = valor * 2;
+                    printf("Você ganhou R$%.2lf\n", valorFinal);
+                } else if (pontuacao_aviao <= MIN_SCORE) {
+                    printf("O avião atingiu a pontuação mínima! Você perdeu!\n");
+                    valorFinal = 0.0;
+                }
+
+                return 0; 
+                break;
+
+            case 0:
+                return 0; 
+                break;
+        } 
+    } while (opcao != 0);
+
+    return 0; 
+}
